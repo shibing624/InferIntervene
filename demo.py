@@ -10,8 +10,6 @@ import gradio as gr
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from thinking_intervention import ThinkingIntervention
 
-# 默认使用的开源模型
-DEFAULT_MODEL = "Qwen/Qwen-1_8B"  # 可以替换为其他开源模型
 
 # 预定义的干预策略
 INTERVENTION_STRATEGIES = {
@@ -70,7 +68,7 @@ INTERVENTION_STRATEGIES = {
 class ThinkingInterventionDemo:
     """思维干预演示应用"""
     
-    def __init__(self, default_model: str = DEFAULT_MODEL):
+    def __init__(self, default_model: str = "Qwen/Qwen2.5-0.5B-Instruct"):
         """初始化演示应用"""
         self.default_model = default_model
         self.model_instance = None
@@ -181,7 +179,7 @@ def create_demo():
             with gr.Column(scale=2):
                 model_name = gr.Dropdown(
                     label="选择模型",
-                    choices=["Qwen/Qwen-1_8B", "Qwen/Qwen-7B", "meta-llama/Llama-2-7b-hf", "baichuan-inc/Baichuan2-7B-Base"],
+                    choices=["Qwen/Qwen2.5-0.5B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct"],
                     value=demo.default_model
                 )
                 load_button = gr.Button("加载模型")
