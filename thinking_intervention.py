@@ -222,13 +222,13 @@ class StreamingSafetyIntervention:
         self.top_p = top_p
         self.system_prompt = system_prompt
         self.intervention_text = intervention_text
-        
+
         # 初始化黑名单
         self.blacklist_terms = blacklist_terms or {"炸弹", "恐怖袭击", "毒品", "违禁物品", "炸药"}
-        
+
         # 设置安全检查函数
         self.safety_check_function = safety_check_function or self._default_safety_check
-        
+
         logger.info(f"正在加载模型 {model_name}")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -277,45 +277,45 @@ class StreamingSafetyIntervention:
             {"role": "system", "content": system_prompt or self.system_prompt},
             {"role": "user", "content": prompt}
         ]
-        
+
         chat_text = self.tokenizer.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True
         )
-        
+
         inputs = self.tokenizer(chat_text, return_tensors="pt").to(self.model.device)
         input_ids = inputs.input_ids
-        
+
         # 存储生成的文本，用于安全检查
         generated_text = ""
-        
+
         # 是否已经插入干预
         has_intervened = False
-        
+
         # 流式生成
         streamer = self._stream_generate(input_ids)
-        
+
         for new_token in streamer:
             # 检查是否需要进行安全干预
             if not has_intervened:
                 check_text = generated_text[-check_window_size:] + new_token if generated_text else new_token
                 if self.safety_check_function(check_text):
                     has_intervened = True
-                    
+
                     # 生成干预文本的标记
                     for intervention_token in self.intervention_text:
                         if callback:
                             callback(intervention_token, True)
                         yield (intervention_token, True)
-            
+
             # 将新生成的token添加到文本中
             generated_text += new_token
-            
+
             # 通过回调函数处理token
             if callback:
                 callback(new_token, False)
-            
+
             yield (new_token, False)
 
     def _stream_generate(self, input_ids: torch.Tensor) -> Iterator[str]:
@@ -332,13 +332,13 @@ class StreamingSafetyIntervention:
         with torch.no_grad():
             # 设置初始past_key_values为None
             past = None
-            
+
             # 当前生成的token数
             gen_tokens_count = 0
-            
+
             # 使用当前输入生成第一个token
             cur_input_ids = input_ids
-            
+
             while gen_tokens_count < self.max_new_tokens:
                 # 模型前向传播
                 outputs = self.model(
@@ -346,40 +346,40 @@ class StreamingSafetyIntervention:
                     past_key_values=past,
                     use_cache=True
                 )
-                
+
                 # 获取下一个token的logits和past_key_values
                 next_token_logits = outputs.logits[:, -1, :]
                 past = outputs.past_key_values
-                
+
                 # 应用温度和top_p采样
                 if self.temperature > 0:
                     next_token_logits = next_token_logits / self.temperature
-                
+
                 # 应用top_p采样
                 if 0 < self.top_p < 1.0:
                     sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
                     cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
-                    
+
                     # 移除概率较低的tokens
                     sorted_indices_to_remove = cumulative_probs > self.top_p
                     sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
                     sorted_indices_to_remove[..., 0] = 0
-                    
+
                     indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
                     next_token_logits[indices_to_remove] = -float('Inf')
-                
+
                 # 采样下一个token
                 probs = torch.softmax(next_token_logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
-                
+
                 # 如果生成了EOS token，结束生成
                 if next_token.item() == self.tokenizer.eos_token_id:
                     break
-                
+
                 # 解码token
                 next_token_text = self.tokenizer.decode(next_token[0])
                 yield next_token_text
-                
+
                 # 更新当前输入为下一个token
                 cur_input_ids = next_token
                 gen_tokens_count += 1
@@ -402,7 +402,7 @@ class StreamingSafetyIntervention:
             生成的完整文本
         """
         full_text = ""
-        
+
         # 定义回调函数
         def token_callback(token: str, is_intervention: bool):
             nonlocal full_text
@@ -412,36 +412,40 @@ class StreamingSafetyIntervention:
                     print(f"\033[91m{token}\033[0m", end="", flush=True)  # 红色
                 else:
                     print(token, end="", flush=True)
-            
+
             full_text += token
-        
+
         # 流式生成
         for _, _ in self.stream_generate(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            callback=token_callback
+                prompt=prompt,
+                system_prompt=system_prompt,
+                callback=token_callback
         ):
             pass
-        
+
         if print_stream:
             print()  # 打印换行
-        
+
         return full_text
 
 
 def main():
     """主函数，用于命令行运行"""
     parser = argparse.ArgumentParser(description="思维干预和安全干预技术演示")
-    parser.add_argument("--model", type=str, default="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", help="使用的HuggingFace模型名称")
+    parser.add_argument("--model", type=str, default="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+                        help="使用的HuggingFace模型名称")
     parser.add_argument("--prompt", type=str, default="化学反应中有哪些危险物质，可以用来做炸药", help="输入提示")
     parser.add_argument("--system-prompt", type=str, default="你是一个有用的助手。", help="系统提示")
-    parser.add_argument("--intervention", type=str, default="请确保回答准确、客观、全面，如果信息不足应明确说明。", help="干预文本")
+    parser.add_argument("--intervention", type=str, default="请确保回答准确、客观、全面，如果信息不足应明确说明。",
+                        help="干预文本")
     parser.add_argument("--mode", type=str, default="thinking", choices=["thinking", "streaming"], help="干预模式")
     parser.add_argument("--blacklist", type=str, nargs="+", default=["炸弹", "恐怖袭击"], help="黑名单词汇")
-    
+
     # 思维干预相关参数
-    parser.add_argument("--position", type=str, default="beginning", choices=["beginning", "middle", "custom"], help="干预位置")
-    parser.add_argument("--intervention-point", type=int, default=None, help="自定义干预点，表示在生成的文本中插入干预文本的位置（token数量）")
+    parser.add_argument("--position", type=str, default="beginning", choices=["beginning", "middle", "custom"],
+                        help="干预位置")
+    parser.add_argument("--intervention-point", type=int, default=None,
+                        help="自定义干预点，表示在生成的文本中插入干预文本的位置（token数量）")
     parser.add_argument("--partial-length", type=int, default=500, help="中间干预时，第一次生成的长度")
     parser.add_argument("--compare", action="store_true", help="是否同时运行不干预的版本进行比较")
 
@@ -480,7 +484,7 @@ def main():
             print("\n===== 不带思维干预的输出 =====")
             print(output_without_intervention)
             print(f"生成时间: {vanilla_time:.2f}秒")
-    
+
     else:
         # 使用流式安全干预模式
         si = StreamingSafetyIntervention(
@@ -489,7 +493,7 @@ def main():
             intervention_text=args.intervention,
             blacklist_terms=set(args.blacklist)
         )
-        
+
         logger.info("开始流式生成（带安全干预）...")
         print("\n===== 流式输出（带安全干预）=====")
         start = time.time()

@@ -1,9 +1,7 @@
 import sys
 import os
-import torch
 import time
 from loguru import logger
-from typing import List, Dict, Any, Optional
 import gradio as gr
 
 # 导入思维干预实现
@@ -68,23 +66,25 @@ INTERVENTION_STRATEGIES = {
 class ThinkingInterventionDemo:
     """思维干预演示应用"""
 
-    def __init__(self, default_model: str = "Qwen/Qwen2.5-0.5B-Instruct"):
+    def __init__(self):
         """初始化演示应用"""
-        self.default_model = default_model
-        self.model_instance = None
+        model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+        self.model_instance = self.load_model(model_name)
 
-    def load_model(self, model_name: str) -> str:
+    def load_model(self, model_name: str):
         """加载模型并返回加载状态"""
+        model_instance = None
         try:
             start_time = time.time()
-            self.model_instance = ThinkingIntervention(
+            model_instance = ThinkingIntervention(
                 model_name=model_name,
             )
             load_time = time.time() - start_time
-            return f"✅ 模型 {model_name} 加载成功! (耗时 {load_time:.2f}秒)"
+            label = f"✅ 模型 {model_name} 加载成功! (耗时 {load_time:.2f}秒)"
         except Exception as e:
-            logger.error(f"模型加载失败: {e}")
-            return f"❌ 模型加载失败: {str(e)}"
+            label = f"❌ 模型加载失败: {str(e)}"
+        logger.info(label)
+        return model_instance
 
     def generate_response(
             self,
@@ -96,14 +96,14 @@ class ThinkingInterventionDemo:
     ) -> tuple:
         """
         生成响应并返回结果
-        
+
         Args:
             prompt: 用户输入的提示
             use_intervention: 是否使用思维干预
             intervention_strategy: 干预策略名称
             custom_intervention: 自定义干预文本
             intervention_position: 干预位置
-            
+
         Returns:
             包含生成结果的元组 (output, thinking, time)
         """
@@ -164,20 +164,11 @@ def create_demo():
         gr.Markdown("# 思维干预技术演示")
         gr.Markdown("""
         基于论文《Effectively Controlling Reasoning Models through Thinking Intervention》实现的思维干预技术演示。
-        
+
         思维干预是一种在LLM推理过程中插入或修改思考步骤的方法，用于引导模型的推理过程。
         """)
 
         with gr.Row():
-            with gr.Column(scale=2):
-                model_name = gr.Dropdown(
-                    label="选择模型",
-                    choices=["Qwen/Qwen2.5-0.5B-Instruct", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"],
-                    value=demo.default_model
-                )
-                load_button = gr.Button("加载模型")
-                model_status = gr.Textbox(label="模型状态", value="未加载模型")
-
             with gr.Column(scale=3):
                 gr.Markdown("### 思维干预设置")
                 with gr.Row():
@@ -238,13 +229,6 @@ def create_demo():
             label="示例问题"
         )
 
-        # 设置事件处理
-        load_button.click(
-            fn=demo.load_model,
-            inputs=model_name,
-            outputs=model_status
-        )
-
         def update_strategy_info(strategy_name):
             """更新策略信息显示"""
             is_custom = strategy_name == "自定义"
@@ -278,4 +262,4 @@ def create_demo():
 if __name__ == "__main__":
     # 创建并启动演示
     demo = create_demo()
-    demo.launch(share=False)
+    demo.launch(share=False, server_port=8081, server_name="0.0.0.0", debug=True)
