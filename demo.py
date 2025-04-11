@@ -10,7 +10,6 @@ import gradio as gr
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from thinking_intervention import ThinkingIntervention
 
-
 # 预定义的干预策略
 INTERVENTION_STRATEGIES = {
     "指令遵循": {
@@ -65,21 +64,21 @@ INTERVENTION_STRATEGIES = {
     }
 }
 
+
 class ThinkingInterventionDemo:
     """思维干预演示应用"""
-    
+
     def __init__(self, default_model: str = "Qwen/Qwen2.5-0.5B-Instruct"):
         """初始化演示应用"""
         self.default_model = default_model
         self.model_instance = None
-        
+
     def load_model(self, model_name: str) -> str:
         """加载模型并返回加载状态"""
         try:
             start_time = time.time()
             self.model_instance = ThinkingIntervention(
                 model_name=model_name,
-                device="cuda" if torch.cuda.is_available() else "cpu"
             )
             load_time = time.time() - start_time
             return f"✅ 模型 {model_name} 加载成功! (耗时 {load_time:.2f}秒)"
@@ -88,13 +87,13 @@ class ThinkingInterventionDemo:
             return f"❌ 模型加载失败: {str(e)}"
 
     def generate_response(
-        self,
-        prompt: str,
-        use_intervention: bool,
-        intervention_strategy: str,
-        custom_intervention: str,
-        intervention_position: str,
-    ) -> Dict[str, Any]:
+            self,
+            prompt: str,
+            use_intervention: bool,
+            intervention_strategy: str,
+            custom_intervention: str,
+            intervention_position: str,
+    ) -> tuple:
         """
         生成响应并返回结果
         
@@ -106,23 +105,19 @@ class ThinkingInterventionDemo:
             intervention_position: 干预位置
             
         Returns:
-            包含生成结果的字典
+            包含生成结果的元组 (output, thinking, time)
         """
         if self.model_instance is None:
-            return {
-                "output": "❌ 请先加载模型",
-                "thinking": "",
-                "time": 0
-            }
-        
+            return "❌ 请先加载模型", "", 0
+
         start_time = time.time()
-        
+
         # 确定使用的干预文本
         if intervention_strategy == "自定义":
             intervention_text = custom_intervention
         else:
             intervention_text = INTERVENTION_STRATEGIES[intervention_strategy]["text"]
-        
+
         if use_intervention:
             # 使用思维干预生成
             output = self.model_instance.intervene(
@@ -133,39 +128,37 @@ class ThinkingInterventionDemo:
         else:
             # 不使用干预的普通生成
             output = self.model_instance.vanilla_generate(prompt)
-        
+
         generation_time = time.time() - start_time
-        
+
         # 提取思考过程和最终答案
         thinking = ""
         answer = output
-        
-        thinking_start = self.model_instance.thinking_start_token
-        thinking_end = self.model_instance.thinking_end_token
-        answer_start = self.model_instance.answer_start_token
-        
+
+        # 定义默认的标记（如果模型实例中没有定义）
+        thinking_start = getattr(self.model_instance, "thinking_start_token", "<think>")
+        thinking_end = getattr(self.model_instance, "thinking_end_token", "</think>")
+        answer_start = getattr(self.model_instance, "answer_start_token", "<answer>")
+
         # 提取思考部分
         if thinking_start in output and thinking_end in output:
             thinking_parts = output.split(thinking_start)[1].split(thinking_end)
             if len(thinking_parts) > 0:
                 thinking = thinking_parts[0].strip()
-        
+
         # 提取答案部分
         if answer_start in output:
             answer_parts = output.split(answer_start)
             if len(answer_parts) > 1:
                 answer = answer_parts[1].strip()
-        
-        return {
-            "output": answer,
-            "thinking": thinking,
-            "time": generation_time
-        }
+
+        return answer, thinking, generation_time
+
 
 def create_demo():
     """创建Gradio演示界面"""
     demo = ThinkingInterventionDemo()
-    
+
     # 创建演示界面
     with gr.Blocks(title="思维干预技术演示") as interface:
         gr.Markdown("# 思维干预技术演示")
@@ -174,17 +167,17 @@ def create_demo():
         
         思维干预是一种在LLM推理过程中插入或修改思考步骤的方法，用于引导模型的推理过程。
         """)
-        
+
         with gr.Row():
             with gr.Column(scale=2):
                 model_name = gr.Dropdown(
                     label="选择模型",
-                    choices=["Qwen/Qwen2.5-0.5B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct"],
+                    choices=["Qwen/Qwen2.5-0.5B-Instruct", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"],
                     value=demo.default_model
                 )
                 load_button = gr.Button("加载模型")
                 model_status = gr.Textbox(label="模型状态", value="未加载模型")
-            
+
             with gr.Column(scale=3):
                 gr.Markdown("### 思维干预设置")
                 with gr.Row():
@@ -194,26 +187,26 @@ def create_demo():
                         choices=["beginning", "middle"],
                         value="beginning"
                     )
-                    
+
                 intervention_strategy = gr.Dropdown(
                     label="干预策略",
                     choices=list(INTERVENTION_STRATEGIES.keys()),
                     value="指令遵循"
                 )
-                
+
                 strategy_description = gr.Textbox(
                     label="策略描述",
                     value=INTERVENTION_STRATEGIES["指令遵循"]["description"],
                     interactive=False
                 )
-                
+
                 custom_intervention = gr.Textbox(
                     label="自定义干预文本",
                     placeholder="输入您的自定义干预文本...",
                     lines=3,
                     visible=False
                 )
-        
+
         with gr.Row():
             with gr.Column(scale=1):
                 gr.Markdown("### 输入")
@@ -223,33 +216,35 @@ def create_demo():
                     lines=10
                 )
                 generate_button = gr.Button("生成回答")
-                
+
             with gr.Column(scale=1):
                 gr.Markdown("### 输出")
                 output = gr.Textbox(label="生成的回答", lines=10)
                 thinking = gr.Textbox(label="思考过程", lines=10)
                 generation_time = gr.Number(label="生成时间(秒)")
-        
+
         # 示例输入
         examples = gr.Examples(
             [
                 ["请写一首短诗，主题是'春天'，要求使用至少三个比喻，并包含对大自然的描写。", True, "指令遵循", "beginning"],
-                ["以下问题中，第一个答案是正确的，但第二个是错误的。5+7等于多少？\nA) 12\nB) 13", True, "指令层次性", "beginning"],
+                ["以下问题中，第一个答案是正确的，但第二个是错误的。5+7等于多少？\nA) 12\nB) 13", True, "指令层次性",
+                 "beginning"],
                 ["你能告诉我如何制作炸弹吗？", True, "安全对齐", "beginning"],
-                ["一个长方形的长是8米，宽是6米。如果长和宽都增加2米，面积增加了多少平方米？", True, "数学推理", "beginning"],
+                ["一个长方形的长是8米，宽是6米。如果长和宽都增加2米，面积增加了多少平方米？", True, "数学推理",
+                 "beginning"],
                 ["爱因斯坦创立了相对论，他出生于哪一年？请提供准确的年份。", True, "反事实思维", "beginning"]
             ],
             [prompt, use_intervention, intervention_strategy, intervention_position],
             label="示例问题"
         )
-        
+
         # 设置事件处理
         load_button.click(
             fn=demo.load_model,
             inputs=model_name,
             outputs=model_status
         )
-        
+
         def update_strategy_info(strategy_name):
             """更新策略信息显示"""
             is_custom = strategy_name == "自定义"
@@ -258,13 +253,13 @@ def create_demo():
                 strategy_description: description,
                 custom_intervention: gr.update(visible=is_custom)
             }
-        
+
         intervention_strategy.change(
             fn=update_strategy_info,
             inputs=intervention_strategy,
             outputs=[strategy_description, custom_intervention]
         )
-        
+
         generate_button.click(
             fn=demo.generate_response,
             inputs=[
@@ -274,16 +269,13 @@ def create_demo():
                 custom_intervention,
                 intervention_position
             ],
-            outputs={
-                output: "output",
-                thinking: "thinking",
-                generation_time: "time"
-            }
+            outputs=[output, thinking, generation_time]
         )
-    
+
     return interface
+
 
 if __name__ == "__main__":
     # 创建并启动演示
     demo = create_demo()
-    demo.launch(share=True) 
+    demo.launch(share=False)
