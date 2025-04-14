@@ -13,7 +13,7 @@
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![python_version](https://img.shields.io/badge/Python-3.11%2B-green.svg)](requirements.txt)
 [![GitHub issues](https://img.shields.io/github/issues/shibing624/thinking-intervention.svg)](https://github.com/shibing624/thinking-intervention/issues)
-[![Wechat Group](https://img.shields.io/badge/wechat-group-green.svg?logo=wechat)](#☎️ Contact)
+[![Wechat Group](https://img.shields.io/badge/wechat-group-green.svg?logo=wechat)](##Contact)
 
 
 基于论文 [《Effectively Controlling Reasoning Models through Thinking Intervention》](https://arxiv.org/abs/2503.24370) 实现的思维干预技术，用于引导大语言模型的推理过程。
