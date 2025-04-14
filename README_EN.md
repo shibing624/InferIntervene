@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://github.com/shibing624/thinking-intervention">
-    <img src="https://raw.githubusercontent.com/shibing624/thinking-intervention/main/docs/logo.png" height="150" alt="Logo">
+    <img src="https://raw.githubusercontent.com/shibing624/thinking-intervention/main/docs/logo.png" height="50" alt="Logo">
   </a>
 </div>
 
