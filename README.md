@@ -1,6 +1,6 @@
-# InferIntervention
+# ThinkingIntervention
 
-InferIntervention is a framework for implementing intervention mechanisms in large language model inference processes. It provides tools for real-time monitoring and intervention in LLM outputs, helping to ensure safe, controlled, and guided text generation.
+ThinkingIntervention is a framework for implementing intervention mechanisms in large language model inference processes. It provides tools for real-time monitoring and intervention in LLM outputs, helping to ensure safe, controlled, and guided text generation.
 
 ## 🌟 Features
 
@@ -13,8 +13,8 @@ InferIntervention is a framework for implementing intervention mechanisms in lar
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/InferIntervention.git
-cd InferIntervention
+git clone https://github.com/yourusername/ThinkingIntervention.git
+cd ThinkingIntervention
 
 # Install dependencies
 pip install -r requirements.txt
