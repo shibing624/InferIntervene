@@ -77,20 +77,15 @@ class ThinkingIntervention:
             {"role": "system", "content": system_prompt or self.system_prompt},
             {"role": "user", "content": prompt}
         ]
-
         text = self.tokenizer.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True
         )
-
         # 直接在提示后附加干预文本
         full_prompt = f"{text} {intervention_text}"
         logger.debug(f"intervention prompt: {full_prompt}")
-
-        # 生成回答
         model_inputs = self.tokenizer([full_prompt], return_tensors="pt").to(self.model.device)
-
         with torch.no_grad():
             output_ids = self.model.generate(
                 **model_inputs,
@@ -100,13 +95,10 @@ class ThinkingIntervention:
                 do_sample=True,
                 pad_token_id=self.tokenizer.eos_token_id,
             )
-
-        # 解码并返回生成的文本
         generated_ids = [
             output_ids[i][len(input_ids):] for i, input_ids in enumerate(model_inputs.input_ids)
         ]
         response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
         return response
 
     def stream_intervene_generate(
@@ -150,9 +142,9 @@ class ThinkingIntervention:
             do_sample=True,
             pad_token_id=self.tokenizer.eos_token_id,
         )
-
         thread = threading.Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
+        
         generated_text = ""
         for new_text in streamer:
             generated_text += new_text
