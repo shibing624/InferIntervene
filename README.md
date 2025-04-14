@@ -1,4 +1,4 @@
-[**🇨🇳中文**](https://github.com/shibing624/thinking-intervention/blob/main/README.md) | [**🌐English**](https://github.com/shibing624/thinking-intervention/blob/main/README_EN.md) | [**🇯🇵日本語**](https://github.com/shibing624/thinking-intervention/blob/main/README_JP.md)
+[**🇨🇳中文**](https://github.com/shibing624/thinking-intervention/blob/main/README.md) | [**🌐English**](https://github.com/shibing624/thinking-intervention/blob/main/README_EN.md)
 
 <div align="center">
   <a href="https://github.com/shibing624/thinking-intervention">
