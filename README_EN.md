@@ -13,7 +13,7 @@
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![python_version](https://img.shields.io/badge/Python-3.11%2B-green.svg)](requirements.txt)
 [![GitHub issues](https://img.shields.io/github/issues/shibing624/thinking-intervention.svg)](https://github.com/shibing624/thinking-intervention/issues)
-[![Wechat Group](https://img.shields.io/badge/wechat-group-green.svg?logo=wechat)](#Contact)
+[![Wechat Group](https://img.shields.io/badge/wechat-group-green.svg?logo=wechat)](#☎️ Contact)
 
 An implementation of thinking intervention techniques based on the paper "Effectively Controlling Reasoning Models through Thinking Intervention" to guide the reasoning process of large language models.
 
